@@ -1,11 +1,11 @@
 # PWIR
  Concurrent and distributed programming course. AGH, EAIiIB 
 
-#Authors
+# Authors
 *Jakub Ficoń 
 *Katarzyna Nyznar
 
-#PL
+# PL
 Projekt zaliczeniowy na kurs Programowanie Współbieżne i Rozproszone.
 
 Wykonany w języku Ada.
