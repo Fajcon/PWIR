@@ -2,20 +2,45 @@ with Ada.Text_IO;
 use Ada.Text_IO;
 
 procedure Main is
-  
+ 
+--Nasz magazyn  
+protected Stock is
+  procedure GetPickle;
+	function GetNumberOfPickles return Integer;
+  private
+   NumberOfPickles : Integer := 10;
+end Stock;
+
+protected body Stock is
+  procedure GetPickle is
+  begin
+    NumberOfPickles := NumberOfPickles - 1;
+  end GetPickle;
+	function GetNumberOfPickles return Integer is
+	begin
+		return NumberOfPickles;
+	end GetNumberOfPickles;
+end Stock;
+
 --Typ słoik TODO zastanowic sie czy zrobić to inaczej
-protected type Jar (Init_Sem: Integer := 0) is
+protected type Slot (Init_Sem: Integer := 0) is
 	entry AddPickle;
+	entry SetJar;
 	procedure Start;
 	procedure Check;
 	private
 		Ok: Boolean := False;
 		Nr: Integer := Init_Sem;
+		Jar: Boolean := True;
 		Pickle : Boolean := False;
-end Jar;
+end Slot;
 
-protected body Jar is
-	entry AddPickle when (not Pickle and Ok) is
+protected body Slot is
+	entry SetJar when (not Jar and Ok) is
+	begin
+		Jar:= True;
+	end SetJar;
+	entry AddPickle when (Jar and not Pickle and Ok) is
 	begin
 		Pickle := True;
 	end AddPickle;
@@ -31,22 +56,26 @@ protected body Jar is
 			Put_Line("Pickles -");
 		end if;
 	end Check;
-end Jar;
+end Slot;
 
---Nasz słoik TODO zamienić na listę słoików
-Jar1: Jar(1);  
+--Nasze sloty na słoiki TODO zamienić na listę.
+Slot1: Slot(1);  
 
---Pierwsze urządzenie dodające ogórki do słoika
-task Machine1;
+--Urządzenie dodające ogórki do słoika
+task Machine2;
 
-task body Machine1 is
-	NumberOfCucumbersInStock : Integer := 10;
+task body Machine2 is
 begin  
-	Put_Line("Machine1: I am putting a pickle into jar.");
-	Jar1.AddPickle;
-	NumberOfCucumbersInStock:= NumberOfCucumbersInStock - 1;
-	Put_Line("Machine1: ready");
-end Machine1;
+	Put_Line("Machine2: I am ready to put a pickle into jar.");
+	--TODO change to exception
+	if Stock.GetNumberOfPickles > 1 then
+		Stock.GetPickle;
+		Slot1.AddPickle;
+	else
+		Put_Line("There is no more pickles in stock.");
+	end if;
+	Put_Line("Machine2: I put pickle into the jar.");
+end Machine2;
 
 
 --Urządzenie sprawdzające zawartość słoika
@@ -55,16 +84,16 @@ task SupervisingMachine;
 
 task body SupervisingMachine is
 begin
+  loop
 	Put_Line("SupervisingMachine: I am checking Jar.");
-	Jar1.Check;
-  delay 2.0;
-	Put_Line("SupervisingMachine: I am checking Jar.");
-	Jar1.Check;
+	Slot1.Check;
+  delay 0.5;
+  end loop; 
 end SupervisingMachine;
 
 begin
 	Put_Line("Begin of production.");
   delay 0.5;
-	Jar1.Start;
+	Slot1.Start;
 end Main;
   
