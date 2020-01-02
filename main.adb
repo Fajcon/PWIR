@@ -23,14 +23,13 @@ protected body Stock is
 end Stock;
 
 --Typ słoik TODO zastanowic sie czy zrobić to inaczej
-protected type Slot (Init_Sem: Integer := 0) is
+protected type Slot is
 	entry AddPickle;
 	entry SetJar;
 	procedure Start;
 	procedure Check;
 	private
 		Ok: Boolean := False;
-		Nr: Integer := Init_Sem;
 		Jar: Boolean := True;
 		Pickle : Boolean := False;
 end Slot;
@@ -59,8 +58,15 @@ protected body Slot is
 end Slot;
 
 --Nasze sloty na słoiki TODO zamienić na listę.
-Slot1: Slot(1);  
 
+--  Wielkość tablicy slotów
+subtype Index is integer range 1..2;
+
+type SlotsArray is array (Index) of Slot;
+
+--Nasze sloty na słoiki
+Slots : array (1 .. 3) of Slot;
+  
 --Urządzenie dodające ogórki do słoika
 task Machine2;
 
@@ -70,7 +76,7 @@ begin
 	--TODO change to exception
 	if Stock.GetNumberOfPickles > 1 then
 		Stock.GetPickle;
-		Slot1.AddPickle;
+		Slots(1).AddPickle;
 	else
 		Put_Line("There is no more pickles in stock.");
 	end if;
@@ -86,7 +92,7 @@ task body SupervisingMachine is
 begin
   loop
 	Put_Line("SupervisingMachine: I am checking Jar.");
-	Slot1.Check;
+	Slots(1).Check;
   delay 0.5;
   end loop; 
 end SupervisingMachine;
@@ -94,6 +100,6 @@ end SupervisingMachine;
 begin
 	Put_Line("Begin of production.");
   delay 0.5;
-	Slot1.Start;
+	Slots(1).Start;
 end Main;
   
