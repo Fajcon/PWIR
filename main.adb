@@ -7,11 +7,13 @@ procedure Main is
 protected Stock is
   procedure GetCleanPickle;
   procedure CleanPickle;
+  procedure StoreReadyJar;
   function GetNumberOfCleanPickles return Integer;
   function GetNumberOfPickles return Integer;
   private
    NumberOfPickles : Integer := 10;
    NumberOfCleanPickles : Integer := 0;
+   NumberOfReadyJars : Integer := 0;
 end Stock;
 
 protected body Stock is
@@ -25,8 +27,13 @@ protected body Stock is
   begin
     NumberOfCleanPickles := NumberOfCleanPickles - 1;
   end GetCleanPickle;
+  
+  procedure StoreReadyJar is
+  begin
+    NumberOfReadyJars := NumberOfReadyJars + 1;
+  end StoreReadyJar;
 
-    function GetNumberOfPickles return Integer is
+    function GetNumberOfPickles return Integer is 
 	begin
 		return NumberOfPickles;
 	end GetNumberOfPickles;
@@ -35,33 +42,36 @@ protected body Stock is
     begin
     	return NumberOfCleanPickles;
     end GetNumberOfCleanPickles;
+    
+    function GetNumberOfReadyJars return Integer is 
+    begin
+    	return NumberOfReadyJars;
+    end GetNumberOfReadyJars;
 end Stock;
 
 protected type Slot is
 	entry AddPickle;
 	entry SetJar;
 	entry AddVinegar;
+	entry StoreJar;
 	procedure Check;
 	function isInMachine return Boolean;
 	private
 	    Vinegar: Boolean := False;
-	    --TODO ustawić na false idodać maszyne która ustawia to na true
-		Jar: Boolean := True;
-		Pickle : Boolean := False;
-	    --TODO chodzi o to czy jest używany ustawić na true w gdy rozpoczynamy na nim prace i na false w ostatniej maszynie
-	    --gdy jest false to wszystkie pola też muszą byc false
-		inMachine : Boolean := False;
+		Jar: Boolean := False;
+		Pickle : Boolean := False;	    
+		inMachine : Boolean := False;   --gdy jest false to wszystkie pola też muszą byc false
 end Slot;
 
 protected body Slot is
 	entry SetJar when (not Jar) is
 	begin
+	    inMachine := True;
 		Jar:= True;
 	end SetJar;
 	
 	entry AddPickle when (Jar and not Pickle) is
 	begin
-        inMachine := True;
         Stock.GetCleanPickle;
         Pickle := True;
 	end AddPickle;
@@ -69,6 +79,15 @@ protected body Slot is
 	entry AddVinegar when (Jar and Pickle) is
 	begin
 	    Vinegar := True;
+	end;
+	
+	entry StoreJar when (Jar and Pickle and Vinegar) is
+	begin
+	    Stock.StoreReadyJar;
+	    inMachine := False;
+	    Jar := False;
+	    Pickle := False;
+	    Vinegar := False;
 	end;
 	
 	procedure Check is
@@ -112,6 +131,23 @@ begin
 	end loop;
 end Machine1;
 
+--Urządzenie magazynujące gotowy słoik
+task JarStorer is
+    entry Start (IndexOfSlot: in Integer);
+end JarStorer;
+
+task body JarStorer is
+begin
+    loop
+        accept Start (IndexOfSlot: in Integer) do
+            Put_Line("JarStorer: I am storing the jar" & IndexOfSlot'Image);
+            delay 3.0;
+            Slots(IndexOfSlot).StoreJar;
+	    end Start;
+	end loop;
+end JarStorer;
+
+--Urządzenie dodające zalewę do słoika
 task VinegarAdder is
     entry Start (IndexOfSlot: in Integer);
 end VinegarAdder;
@@ -124,6 +160,7 @@ begin
             Put_Line("VinegarAdder: I add vinegar into the jar." & IndexOfSlot'Image);
             delay 3.0;
             Slots(IndexOfSlot).AddVinegar;
+            JarStorer.Start(IndexOfSlot);
 	    end Start;
 	end loop;
 end VinegarAdder;
@@ -138,9 +175,9 @@ begin
 	--TODO change to exception
     loop
         accept Start (IndexOfSlot: in Integer) do
-            Put_Line("PickleAdder: I put pickle into the jar." & IndexOfSlot'Image);
             delay 4.0;
             if Stock.GetNumberOfCleanPickles >= 1 then
+                Put_Line("PickleAdder: I put pickle into the jar." & IndexOfSlot'Image);
                 Slots(IndexOfSlot).AddPickle;
                 VinegarAdder.Start(IndexOfSlot);
             else
@@ -149,6 +186,24 @@ begin
 	    end Start;
 	end loop;
 end PickleAdder;
+
+--Urządzenie przygotowujące słoik
+task JarSetter is
+    entry Start (IndexOfSlot: in Integer);
+end JarSetter;
+
+task body JarSetter is
+begin
+	--TODO change to exception
+    loop
+        accept Start (IndexOfSlot: in Integer) do
+            Put_Line("JarSetter: I am setting the jar" & IndexOfSlot'Image);
+            delay 3.0;
+            Slots(IndexOfSlot).SetJar;
+            PickleAdder.Start(IndexOfSlot);
+	    end Start;
+	end loop;
+end JarSetter;
 
 --Urządzenie sprawdzające zawartość słoika
 --TODO to jest tylko tymczasowe zostanie zastąpione UI
@@ -170,7 +225,7 @@ begin
 	loop
 	    if(Stock.GetNumberOfCleanPickles >= 1 and not Slots(I).isInMachine) then
 	        Put_Line(I'Img);
-            PickleAdder.Start(I);
+	        JarSetter.Start(I);
             I := I + 1;
             if(I > Slots'Length) then
                 I := 1;
