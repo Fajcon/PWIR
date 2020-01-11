@@ -5,21 +5,32 @@ procedure Main is
  
 --Nasz magazyn  
 protected Stock is
-  procedure GetPickle;
+  procedure GetCleanPickle;
+  procedure CleanPickle;
 	function GetNumberOfPickles return Integer;
   private
    NumberOfPickles : Integer := 10;
+   NumberOfCleanPickles : Integer := 0;
 end Stock;
 
 protected body Stock is
-  procedure GetPickle is
+procedure CleanPickle is
   begin
     NumberOfPickles := NumberOfPickles - 1;
-  end GetPickle;
+    NumberOfCleanPickles := NumberOfCleanPickles + 1;
+  end CleanPickle;
+  procedure GetCleanPickle is
+  begin
+    NumberOfCleanPickles := NumberOfCleanPickles - 1;
+  end GetCleanPickle;
 	function GetNumberOfPickles return Integer is
 	begin
 		return NumberOfPickles;
 	end GetNumberOfPickles;
+--  	function GetNumberOfCleanPickles return Integer is
+--      begin
+--      	return NumberOfCleanPickles;
+--      end GetNumberOfCleanPickles;
 end Stock;
 
 --Typ słoik TODO zastanowic sie czy zrobić to inaczej
@@ -41,7 +52,9 @@ protected body Slot is
 	end SetJar;
 	entry AddPickle when (Jar and not Pickle and Ok) is
 	begin
-		Pickle := True;
+        Stock.CleanPickle;                  --!!!!!!!!!!
+        Stock.GetCleanPickle;
+        Pickle := True;
 	end AddPickle;
 	procedure Start is
 	begin
@@ -74,13 +87,17 @@ task body Machine2 is
 begin  
 	Put_Line("Machine2: I am ready to put a pickle into jar.");
 	--TODO change to exception
-	if Stock.GetNumberOfPickles > 1 then
-		Stock.GetPickle;
-		Slots(1).AddPickle;
-	else
-		Put_Line("There is no more pickles in stock.");
-	end if;
-	Put_Line("Machine2: I put pickle into the jar.");
+	for I in Slots'Range loop
+	    if Stock.GetNumberOfPickles > 1 then
+--  	        Stock.CleanPickle;
+--  	        Put_Line("I am cleaning a pickle.");
+--  		    Stock.GetCleanPickle;		
+            Slots(I).AddPickle; 
+            Put_Line("Machine2: I put pickle into the " & Integer'Image (I) & " jar."); 
+	    else
+		    Put_Line("There is no more pickles in stock.");
+	    end if;	    
+	end loop;
 end Machine2;
 
 
@@ -91,15 +108,22 @@ task SupervisingMachine;
 task body SupervisingMachine is
 begin
   loop
-	Put_Line("SupervisingMachine: I am checking Jar.");
-	Slots(1).Check;
-  delay 0.5;
+--  	Put_Line("SupervisingMachine: I am checking Jar.");
+--  	Slots(1).Check;
+--    delay 0.5;
+    for I in Slots'Range loop
+        Put_Line("SupervisingMachine: I am checking " & Integer'Image (I) & " Jar.");
+        Slots(I).Check;
+        delay 0.5;
+    end loop;
   end loop; 
 end SupervisingMachine;
 
 begin
 	Put_Line("Begin of production.");
   delay 0.5;
-	Slots(1).Start;
+	for I in Slots'Range loop
+        Slots(I).Start;
+    end loop;
 end Main;
   
