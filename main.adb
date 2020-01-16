@@ -1,5 +1,5 @@
-with Ada.Text_IO;
-use Ada.Text_IO;
+with Ada.Text_IO; use Ada.Text_IO;
+with Exceptions; use Exceptions;
 
 procedure Main is
  
@@ -14,11 +14,13 @@ protected Stock is
   function GetNumberOfPickles return Integer;
   function GetNumberOfJars return Integer;
   function GetNumberOfCleanJars return Integer;
+  function GetNumberOfReadyJars return Integer;
+
   private
    NumberOfPickles : Integer := 10;
-   NumberOfCleanPickles : Integer := 0;
+   NumberOfCleanPickles : Integer := 1;
    NumberofJars : Integer := 10;
-   NumberOfCleanJars : Integer := 0;
+   NumberOfCleanJars : Integer := 1;
    NumberOfReadyJars : Integer := 0;
 end Stock;
 
@@ -65,15 +67,16 @@ protected body Stock is
         return NumberOfCleanJars;
     end GetNumberOfCleanJars;
     
+    function GetNumberOfReadyJars return Integer is
+    begin
+        return NumberOfReadyJars;
+    end GetNumberOfReadyJars;
+        
     function GetNumberOfJars return Integer is
     begin
         return NumberOfJars;
     end GetNumberOfJars;
     
-    function GetNumberOfReadyJars return Integer is 
-    begin
-    	return NumberOfReadyJars;
-    end GetNumberOfReadyJars;
 end Stock;
 
 protected type Slot is
@@ -166,6 +169,7 @@ begin
             Put_Line("PickleCleaner: I am washing a pickle.");
         else
             Put_Line("There is no more pickles in stock.");
+            
         end if;
     delay 5.0;
 	end loop;
@@ -255,8 +259,7 @@ begin
                 delay 4.0;
                 SpiceAdder.Start(IndexOfSlot);
             else
-            -- TODO exception
-                Put_Line("There is no more pickles in stock.");
+                raise No_More_Pickles_Exception;
             end if;
 	    end Start;
 	end loop;
@@ -277,9 +280,11 @@ begin
                 delay 3.0;
                 PickleAdder.Start(IndexOfSlot);
             else
-            -- TODO exception
-                Put_Line("There is no more jars in stock.");
+                raise No_More_Jars_Exception;
             end if;
+            exception
+               when No_More_Pickles_Exception =>
+                  raise No_More_Pickles_Exception;           
 	    end Start;
 	end loop;
 end JarSetter;
@@ -288,12 +293,15 @@ end JarSetter;
 task SupervisingMachine; 
 
 task body SupervisingMachine is
+Ready_Jars: Integer;
 begin
   loop
     for I in Slots'Range loop
         Put_Line("SupervisingMachine: I am checking " & Integer'Image (I) & " Jar.");
         Slots(I).Check;
     end loop;
+    Ready_Jars := Stock.GetNumberOfReadyJars;
+    Put_Line("SupervisingMachine: Number of ready Jars:" & Ready_Jars'Image);
     delay 3.0;
   end loop; 
 end SupervisingMachine;
@@ -302,12 +310,16 @@ I : Integer := 1;
 begin
 	loop
 	    if(not Slots(I).isInMachine) then
-	        JarSetter.Start(I);
+	        JarSetter.Start(I);	           
             I := I + 1;
             if(I > Slots'Length) then
                 I := 1;
             end if;
-        end if;
+        end if;        
     end loop;
+    exception
+       when No_More_Jars_Exception =>
+          Put_Line("There is no more clean jars in stock. Exception");          
+       when No_More_Pickles_Exception =>
+          Put_Line("There is no more clean pickles in stock exception");          
 end Main;
-  
